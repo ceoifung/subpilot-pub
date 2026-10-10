@@ -103,7 +103,7 @@ jobs:
             --paths=. app.py \
             --distpath dist_gpu
           # 把 CUDA 运行库(cuDNN/cuBLAS)放进包内, 无驱动机也能走 GPU 识别
-          python -c "import glob,os,shutil,nvidia.cudnn,nvidia.cublas; dst=os.path.join('dist_gpu','XianShengGPU','_internal'); [shutil.copy2(d,dst) for p in (nvidia.cudnn,nvidia.cublas) for d in glob.glob(os.path.join(os.path.dirname(p.__file__),'**','*.dll'),recursive=True)]; print('cuda dlls:',len(os.listdir(dst)))"
+          python -c "import glob,os,shutil;import nvidia.cudnn, nvidia.cublas; dst=os.path.join('dist_gpu','XianShengGPU','_internal'); [shutil.copy2(d,dst) for p in (nvidia.cudnn,nvidia.cublas) for base in p.__path__ for d in glob.glob(os.path.join(base,'**','*.dll'),recursive=True)]; print('cuda dlls:',len(glob.glob(os.path.join(dst,'*.dll'))))"
           mv dist_gpu/XianShengGPU "dist_gpu/先声字幕播放器GPU"
           printf '%s\n' \
             "先声 · 双语字幕播放器(GPU版)" \
