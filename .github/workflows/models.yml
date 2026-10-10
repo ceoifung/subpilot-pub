@@ -8,22 +8,25 @@ on:
 jobs:
   publish:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 60
     permissions:
       contents: write
 
     steps:
-      - name: 下载 Lada 模型
+      - name: 下载模型并分卷
         shell: bash
         run: |
           mkdir m && cd m
-          for f in lada_mosaic_detection_model_v4_fast.pt \
-                   lada_mosaic_detection_model_v4_accurate.pt \
-                   lada_mosaic_detection_model_v2.pt \
-                   lada_mosaic_restoration_model_generic_v1.2.pth; do
-            curl -fL --retry 3 -O "https://huggingface.co/ladaapp/lada/resolve/main/$f"
+          W="https://huggingface.co/dropbox-dash/faster-whisper-large-v3-turbo/resolve/main"
+          for f in model.bin config.json preprocessor_config.json tokenizer.json vocabulary.json; do
+            curl -fL --retry 3 -O "$W/$f"
           done
-          sha256sum lada_* > SHA256SUMS.txt
+          curl -fL --retry 3 -o qwen3-4b-q4km.gguf \
+            "https://huggingface.co/bartowski/Qwen_Qwen3-4B-Instruct-2507-GGUF/resolve/main/Qwen_Qwen3-4B-Instruct-2507-Q4_K_M.gguf"
+          split -b 1200m qwen3-4b-q4km.gguf qwen3-4b-q4km.gguf.part
+          sha256sum model.bin config.json preprocessor_config.json tokenizer.json \
+            vocabulary.json qwen3-4b-q4km.gguf qwen3-4b-q4km.gguf.part* > SHA256SUMS.txt
+          rm qwen3-4b-q4km.gguf
           ls -la
 
       - name: 发布到 models-v1 Release
@@ -32,11 +35,10 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release view models-v1 --repo ceoifung/yingzhen-pub > /dev/null 2>&1 || \
-            gh release create models-v1 --repo ceoifung/yingzhen-pub \
-              --title "Lada 模型包" --notes "检测x3 + 修复x1, 供映真使用 | 放置: 程序文件夹内 lada/model_weights/ | 匿名可下载 | ProPainter 权重因授权限制仅在私有渠道提供"
-          gh release upload models-v1 --repo ceoifung/yingzhen-pub --clobber \
-            lada_mosaic_detection_model_v4_fast.pt lada_mosaic_detection_model_v4_accurate.pt \
-            lada_mosaic_detection_model_v2.pt lada_mosaic_restoration_model_generic_v1.2.pth \
-            SHA256SUMS.txt
+          gh release view models-v1 --repo ceoifung/xiansheng-pub > /dev/null 2>&1 || \
+            gh release create models-v1 --repo ceoifung/xiansheng-pub \
+              --title "模型包" --notes "whisper-turbo(识别) + Qwen3-4B(翻译, 2GB限制已分卷)。合并: cat qwen3-4b-q4km.gguf.part* > qwen3-4b-q4km.gguf | 校验见 SHA256SUMS.txt | 匿名可下载无需登录"
+          gh release upload models-v1 --repo ceoifung/xiansheng-pub --clobber \
+            model.bin config.json preprocessor_config.json tokenizer.json vocabulary.json \
+            qwen3-4b-q4km.gguf.part* SHA256SUMS.txt
           echo "上传完成"
