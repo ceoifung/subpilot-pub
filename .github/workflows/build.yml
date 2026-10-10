@@ -51,7 +51,7 @@ jobs:
           python -m pip install -U pip
           pip install faster-whisper "PySide6==6.9.1" llama-cpp-python pyinstaller
 
-      - name: 构建 exe
+      - name: 构建 exe (精简/CPU)
         shell: bash
         working-directory: app
         env:
@@ -85,15 +85,45 @@ jobs:
             > "dist/先声字幕播放器/使用说明.txt"
           cd dist && 7z a -tzip "xiansheng-lite-${{ env.VERSION }}-win64.zip" "先声字幕播放器" && ls -la *.zip
 
+      - name: 构建 GPU 版 (CUDA)
+        shell: bash
+        working-directory: app
+        env:
+          PYTHONIOENCODING: utf-8
+        run: |
+          pip uninstall -y llama-cpp-python
+          pip install --force-reinstall --no-cache-dir \
+            --extra-index-url https://abetlen.github.io/llama-cpp-python/whl/cu124 \
+            "llama-cpp-python==0.3.36"
+          pip install nvidia-cublas-cu12 nvidia-cudnn-cu12
+          python -m PyInstaller --noconfirm --windowed \
+            --name "XianShengGPU" --icon=launcher/app.ico \
+            --collect-all faster_whisper --collect-all ctranslate2 --collect-all tokenizers \
+            --collect-all onnxruntime --collect-all llama_cpp --collect-all av \
+            --paths=. app.py \
+            --distpath dist_gpu
+          # 把 CUDA 运行库(cuDNN/cuBLAS)放进包内, 无驱动机也能走 GPU 识别
+          python -c "import glob,os,shutil,nvidia.cudnn,nvidia.cublas; dst=os.path.join('dist_gpu','XianShengGPU','_internal'); [shutil.copy2(d,dst) for p in (nvidia.cudnn,nvidia.cublas) for d in glob.glob(os.path.join(os.path.dirname(p.__file__),'**','*.dll'),recursive=True)]; print('cuda dlls:',len(os.listdir(dst)))"
+          mv dist_gpu/XianShengGPU "dist_gpu/先声字幕播放器GPU"
+          printf '%s\n' \
+            "先声 · 双语字幕播放器(GPU版)" \
+            "================================" \
+            "1. 双击 XianShengGPU.exe (需要 NVIDIA 显卡 + 较新驱动)" \
+            "2. 首次打开会提示在线下载模型(约4GB, 国内镜像免登录, 支持断点续传)" \
+            "3. 识别走 GPU(快数倍), 翻译默认 CPU 保证播放流畅" \
+            > "dist_gpu/先声字幕播放器GPU/使用说明.txt"
+          cd dist_gpu && 7z a -tzip "xiansheng-gpu-${{ env.VERSION }}-win64.zip" "先声字幕播放器GPU" && ls -la *.zip
+
       - name: 创建 Release 并上传
         shell: bash
-        working-directory: app/dist
+        working-directory: app
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          NOTES="先声 双语字幕播放器 精简版 ${{ env.VERSION }} — 自动构建。首次运行需联网下载模型(约4GB)。源码私有, 问题反馈请到 Issues。"
-          gh release create "$TAG" --repo ceoifung/xiansheng-pub \
-            --title "先声 XianSheng $TAG" \
-            --notes "$NOTES" \
-            --target main \
-            "xiansheng-lite-${{ env.VERSION }}-win64.zip"
+          NOTES="先声 双语字幕播放器 ${{ env.VERSION }} — 自动构建。首次运行需联网下载模型(约4GB)。lite=通用CPU版, gpu=NVIDIA显卡版(识别提速数倍)。源码私有, 问题反馈请到 Issues。"
+          gh release view "$TAG" --repo ceoifung/xiansheng-pub > /dev/null 2>&1 || \
+            gh release create "$TAG" --repo ceoifung/xiansheng-pub \
+              --title "先声 XianSheng $TAG" --notes "$NOTES" --target main
+          gh release upload "$TAG" --repo ceoifung/xiansheng-pub --clobber \
+            "dist/xiansheng-lite-${{ env.VERSION }}-win64.zip" \
+            "dist_gpu/xiansheng-gpu-${{ env.VERSION }}-win64.zip"
