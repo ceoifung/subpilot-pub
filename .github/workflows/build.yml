@@ -1,0 +1,100 @@
+name: Build Release
+
+on:
+  repository_dispatch:
+    types: [build]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: '版本 tag（如 v0.1.0）'
+        required: true
+        default: 'v0.1.0'
+
+jobs:
+  build:
+    runs-on: windows-latest
+    timeout-minutes: 60
+    permissions:
+      contents: write
+
+    steps:
+      - name: 解析版本
+        shell: bash
+        run: |
+          if [ "${{ github.event_name }}" = "repository_dispatch" ]; then
+            TAG="${{ github.event.client_payload.tag }}"
+          else
+            TAG="${{ github.event.inputs.tag }}"
+          fi
+          VERSION="${TAG#v}"
+          echo "TAG=$TAG" >> $GITHUB_ENV
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+          echo "构建版本: $TAG (VERSION=$VERSION)"
+
+      - name: 拉取私有仓库源码
+        shell: bash
+        env:
+          TOKEN: ${{ secrets.PRIVATE_PULL_TOKEN }}
+        run: |
+          git clone --depth 1 --branch "$TAG" \
+            "https://x-access-token:${TOKEN}@github.com/ceoifung/xiansheng.git" app
+          cd app && git log --oneline -1
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: 安装依赖
+        shell: bash
+        working-directory: app
+        run: |
+          python -m pip install -U pip
+          pip install faster-whisper "PySide6==6.9.1" llama-cpp-python pyinstaller
+
+      - name: 构建 exe
+        shell: bash
+        working-directory: app
+        env:
+          PYTHONIOENCODING: utf-8
+        run: |
+          python -m PyInstaller --noconfirm --windowed \
+            --name "XianSheng" --icon=launcher/app.ico \
+            --collect-all faster_whisper --collect-all ctranslate2 --collect-all tokenizers \
+            --collect-all onnxruntime --collect-all llama_cpp --collect-all av \
+            --paths=. app.py
+
+      - name: 组装精简包并压缩
+        shell: bash
+        working-directory: app
+        env:
+          PYTHONIOENCODING: utf-8
+        run: |
+          rm -f dist/XianSheng/_internal/llama_cpp/lib/ggml-cuda.dll \
+                dist/XianSheng/_internal/cublasLt64_12.dll \
+                dist/XianSheng/_internal/cublas64_12.dll || true
+          mv dist/XianSheng "dist/先声字幕播放器"
+          cat > "dist/先声字幕播放器/使用说明.txt" <<'NOTE'
+先声 · 双语字幕播放器(精简版)
+==============================
+1. 双击 XianSheng.exe
+2. 首次打开会提示在线下载模型(约4GB, 国内镜像免登录, 支持断点续传), 之后离线可用
+3. 拖入视频即自动生成双语字幕; 精简版识别/翻译使用 CPU
+
+快捷键: 空格=暂停  ←→=快退/快进5秒  ↑↓=音量
+字幕SRT保存在视频旁边(同名.srt); 支持"批量字幕"多文件后台导出
+NOTE
+          cd dist && 7z a -tzip "xiansheng-lite-${{ env.VERSION }}-win64.zip" "先声字幕播放器" && ls -la *.zip
+
+      - name: 创建 Release 并上传
+        shell: bash
+        working-directory: app/dist
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create "$TAG" --repo ceoifung/xiansheng-pub \
+            --title "先声 XianSheng $TAG" \
+            --notes "先声 双语字幕播放器 精简版 ${{ env.VERSION }} — 自动构建
+
+首次运行需联网下载模型(约4GB)。源码私有, 问题反馈请到 Issues。" \
+            --target main \
+            "xiansheng-lite-${{ env.VERSION }}-win64.zip"
