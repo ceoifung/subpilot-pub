@@ -98,3 +98,5 @@ NOTE
 首次运行需联网下载模型(约4GB)。源码私有, 问题反馈请到 Issues。" \
             --target main \
             "xiansheng-lite-${{ env.VERSION }}-win64.zip"
+
+# reindex
