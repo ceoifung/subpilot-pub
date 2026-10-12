@@ -37,7 +37,7 @@ jobs:
           TOKEN: ${{ secrets.PRIVATE_PULL_TOKEN }}
         run: |
           git clone --depth 1 --branch "$TAG" \
-            "https://x-access-token:${TOKEN}@github.com/ceoifung/xiansheng.git" app
+            "https://x-access-token:${TOKEN}@github.com/ceoifung/subpilot.git" app
           cd app && git log --oneline -1
 
       - uses: actions/setup-python@v5
@@ -58,7 +58,7 @@ jobs:
           PYTHONIOENCODING: utf-8
         run: |
           python -m PyInstaller --noconfirm --windowed \
-            --name "XianSheng" --icon=launcher/app.ico \
+            --name "SubPilot" --icon=launcher/app.ico \
             --collect-all faster_whisper --collect-all ctranslate2 --collect-all tokenizers \
             --collect-all onnxruntime --collect-all llama_cpp --collect-all av \
             --paths=. app.py
@@ -69,21 +69,21 @@ jobs:
         env:
           PYTHONIOENCODING: utf-8
         run: |
-          rm -f dist/XianSheng/_internal/llama_cpp/lib/ggml-cuda.dll \
-                dist/XianSheng/_internal/cublasLt64_12.dll \
-                dist/XianSheng/_internal/cublas64_12.dll || true
-          mv dist/XianSheng "dist/先声字幕播放器"
+          rm -f dist/SubPilot/_internal/llama_cpp/lib/ggml-cuda.dll \
+                dist/SubPilot/_internal/cublasLt64_12.dll \
+                dist/SubPilot/_internal/cublas64_12.dll || true
+          mv dist/SubPilot "dist/先声字幕播放器"
           printf '%s\n' \
             "先声 · 双语字幕播放器(精简版)" \
             "==============================" \
-            "1. 双击 XianSheng.exe" \
+            "1. 双击 SubPilot.exe" \
             "2. 首次打开会提示在线下载模型(约4GB, 国内镜像免登录, 支持断点续传), 之后离线可用" \
             "3. 拖入视频即自动生成双语字幕; 精简版识别/翻译使用 CPU" \
             "" \
             "快捷键: 空格=暂停  左右=快退/快进5秒  上下=音量" \
             "字幕SRT保存在视频旁边(同名.srt); 支持「批量字幕」多文件后台导出" \
             > "dist/先声字幕播放器/使用说明.txt"
-          cd dist && 7z a -tzip "xiansheng-lite-${{ env.VERSION }}-win64.zip" "先声字幕播放器" && ls -la *.zip
+          cd dist && 7z a -tzip "subpilot-lite-${{ env.VERSION }}-win64.zip" "先声字幕播放器" && ls -la *.zip
 
       - name: 构建 GPU 版 (CUDA)
         shell: bash
@@ -97,22 +97,22 @@ jobs:
             "llama-cpp-python==0.3.36"
           pip install nvidia-cublas-cu12 nvidia-cudnn-cu12
           python -m PyInstaller --noconfirm --windowed \
-            --name "XianShengGPU" --icon=launcher/app.ico \
+            --name "SubPilotGPU" --icon=launcher/app.ico \
             --collect-all faster_whisper --collect-all ctranslate2 --collect-all tokenizers \
             --collect-all onnxruntime --collect-all llama_cpp --collect-all av \
             --paths=. app.py \
             --distpath dist_gpu
           # 把 CUDA 运行库(cuDNN/cuBLAS)放进包内, 无驱动机也能走 GPU 识别
-          python -c "import glob,os,shutil;import nvidia.cudnn, nvidia.cublas; dst=os.path.join('dist_gpu','XianShengGPU','_internal'); [shutil.copy2(d,dst) for p in (nvidia.cudnn,nvidia.cublas) for base in p.__path__ for d in glob.glob(os.path.join(base,'**','*.dll'),recursive=True)]; print('cuda dlls:',len(glob.glob(os.path.join(dst,'*.dll'))))"
-          mv dist_gpu/XianShengGPU "dist_gpu/先声字幕播放器GPU"
+          python -c "import glob,os,shutil;import nvidia.cudnn, nvidia.cublas; dst=os.path.join('dist_gpu','SubPilotGPU','_internal'); [shutil.copy2(d,dst) for p in (nvidia.cudnn,nvidia.cublas) for base in p.__path__ for d in glob.glob(os.path.join(base,'**','*.dll'),recursive=True)]; print('cuda dlls:',len(glob.glob(os.path.join(dst,'*.dll'))))"
+          mv dist_gpu/SubPilotGPU "dist_gpu/先声字幕播放器GPU"
           printf '%s\n' \
             "先声 · 双语字幕播放器(GPU版)" \
             "================================" \
-            "1. 双击 XianShengGPU.exe (需要 NVIDIA 显卡 + 较新驱动)" \
+            "1. 双击 SubPilotGPU.exe (需要 NVIDIA 显卡 + 较新驱动)" \
             "2. 首次打开会提示在线下载模型(约4GB, 国内镜像免登录, 支持断点续传)" \
             "3. 识别走 GPU(快数倍), 翻译默认 CPU 保证播放流畅" \
             > "dist_gpu/先声字幕播放器GPU/使用说明.txt"
-          cd dist_gpu && 7z a -tzip "xiansheng-gpu-${{ env.VERSION }}-win64.zip" "先声字幕播放器GPU" && ls -la *.zip
+          cd dist_gpu && 7z a -tzip "subpilot-gpu-${{ env.VERSION }}-win64.zip" "先声字幕播放器GPU" && ls -la *.zip
 
       - name: 创建 Release 并上传
         shell: bash
@@ -121,9 +121,9 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           NOTES="先声 双语字幕播放器 ${{ env.VERSION }} — 自动构建。首次运行需联网下载模型(约4GB)。lite=通用CPU版, gpu=NVIDIA显卡版(识别提速数倍)。源码私有, 问题反馈请到 Issues。"
-          gh release view "$TAG" --repo ceoifung/xiansheng-pub > /dev/null 2>&1 || \
-            gh release create "$TAG" --repo ceoifung/xiansheng-pub \
-              --title "先声 XianSheng $TAG" --notes "$NOTES" --target main
-          gh release upload "$TAG" --repo ceoifung/xiansheng-pub --clobber \
-            "dist/xiansheng-lite-${{ env.VERSION }}-win64.zip" \
-            "dist_gpu/xiansheng-gpu-${{ env.VERSION }}-win64.zip"
+          gh release view "$TAG" --repo ceoifung/subpilot-pub > /dev/null 2>&1 || \
+            gh release create "$TAG" --repo ceoifung/subpilot-pub \
+              --title "先声 SubPilot $TAG" --notes "$NOTES" --target main
+          gh release upload "$TAG" --repo ceoifung/subpilot-pub --clobber \
+            "dist/subpilot-lite-${{ env.VERSION }}-win64.zip" \
+            "dist_gpu/subpilot-gpu-${{ env.VERSION }}-win64.zip"

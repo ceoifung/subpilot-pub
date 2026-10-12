@@ -35,10 +35,10 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release view models-v1 --repo ceoifung/xiansheng-pub > /dev/null 2>&1 || \
-            gh release create models-v1 --repo ceoifung/xiansheng-pub \
+          gh release view models-v1 --repo ceoifung/subpilot-pub > /dev/null 2>&1 || \
+            gh release create models-v1 --repo ceoifung/subpilot-pub \
               --title "模型包" --notes "whisper-turbo(识别) + Qwen3-4B(翻译, 2GB限制已分卷)。合并: cat qwen3-4b-q4km.gguf.part* > qwen3-4b-q4km.gguf | 校验见 SHA256SUMS.txt | 匿名可下载无需登录"
-          gh release upload models-v1 --repo ceoifung/xiansheng-pub --clobber \
+          gh release upload models-v1 --repo ceoifung/subpilot-pub --clobber \
             model.bin config.json preprocessor_config.json tokenizer.json vocabulary.json \
             qwen3-4b-q4km.gguf.part* SHA256SUMS.txt
           echo "上传完成"
