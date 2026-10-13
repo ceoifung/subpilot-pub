@@ -21,11 +21,14 @@ jobs:
           for f in model.bin config.json preprocessor_config.json tokenizer.json vocabulary.json; do
             curl -fL --retry 3 -O "$W/$f"
           done
+          # Rust 版 (subpilot-rs) 使用的 GGML 格式 whisper (whisper.cpp), 1.6G 未超2G限制无需分卷
+          curl -fL --retry 3 -o ggml-large-v3-turbo.bin \
+            "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-large-v3-turbo.bin"
           curl -fL --retry 3 -o qwen3-4b-q4km.gguf \
             "https://huggingface.co/bartowski/Qwen_Qwen3-4B-Instruct-2507-GGUF/resolve/main/Qwen_Qwen3-4B-Instruct-2507-Q4_K_M.gguf"
           split -b 1200m qwen3-4b-q4km.gguf qwen3-4b-q4km.gguf.part
           sha256sum model.bin config.json preprocessor_config.json tokenizer.json \
-            vocabulary.json qwen3-4b-q4km.gguf qwen3-4b-q4km.gguf.part* > SHA256SUMS.txt
+            vocabulary.json ggml-large-v3-turbo.bin qwen3-4b-q4km.gguf qwen3-4b-q4km.gguf.part* > SHA256SUMS.txt
           rm qwen3-4b-q4km.gguf
           ls -la
 
@@ -37,8 +40,8 @@ jobs:
         run: |
           gh release view models-v1 --repo ceoifung/subpilot-pub > /dev/null 2>&1 || \
             gh release create models-v1 --repo ceoifung/subpilot-pub \
-              --title "模型包" --notes "whisper-turbo(识别) + Qwen3-4B(翻译, 2GB限制已分卷)。合并: cat qwen3-4b-q4km.gguf.part* > qwen3-4b-q4km.gguf | 校验见 SHA256SUMS.txt | 匿名可下载无需登录"
+              --title "模型包" --notes "识别: whisper-turbo (Python版=model.bin CTranslate2 / Rust版=ggml-large-v3-turbo.bin GGML) + 翻译: Qwen3-4B (2GB限制已分卷, 合并: cat qwen3-4b-q4km.gguf.part* > qwen3-4b-q4km.gguf)。校验见 SHA256SUMS.txt, 匿名可下载无需登录"
           gh release upload models-v1 --repo ceoifung/subpilot-pub --clobber \
             model.bin config.json preprocessor_config.json tokenizer.json vocabulary.json \
-            qwen3-4b-q4km.gguf.part* SHA256SUMS.txt
+            ggml-large-v3-turbo.bin qwen3-4b-q4km.gguf.part* SHA256SUMS.txt
           echo "上传完成"
