@@ -73,6 +73,18 @@ jobs:
 
       - uses: dtolnay/rust-toolchain@stable
 
+      # 缓存 whisper/llama 的 C++ 编译输出与 crate 源码: 增量构建 5-10 分钟替代全量 20-40 分钟
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            app/src-tauri/target/release/build/whisper-rs-sys-*/out
+            app/src-tauri/target/release/build/llama-cpp-sys-2-*/out
+          key: cargo-${{ runner.os }}-${{ matrix.variant }}-${{ hashFiles('app/src-tauri/Cargo.lock') }}
+          restore-keys: |
+            cargo-${{ runner.os }}-${{ matrix.variant }}-
+
       # runner 镜像已不预装 CUDA, 从 NVIDIA 官方源装工具链子集 (仅编译用, 不需要 GPU)
       - name: 安装 CUDA 工具链 (GPU 版, Linux)
         if: matrix.variant == 'gpu' && runner.os == 'Linux'
