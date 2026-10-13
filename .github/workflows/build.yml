@@ -139,7 +139,17 @@ jobs:
         if: matrix.variant == 'gpu'
         shell: bash
         working-directory: app
-        run: npx tauri build --bundles "$BUNDLES" -- --features cuda
+        env:
+          # Ninja 生成器 + 显式 nvcc: 绕开 MSVC toolset 发现机制 (VS 生成器对 redist 拼装的 CUDA 布局不认)
+          CMAKE_GENERATOR: Ninja
+        run: |
+          if [ "$RUNNER_OS" = "Windows" ]; then
+            export CUDACXX="$(cygpath -w "$CUDA_BIN/nvcc.exe")"
+          else
+            export CUDACXX="$CUDA_BIN/nvcc"
+          fi
+          echo "CUDACXX=$CUDACXX"
+          npx tauri build --bundles "$BUNDLES" -- --features cuda
 
       - name: 上传产物到 Release
         shell: bash
