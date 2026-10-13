@@ -18,8 +18,9 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          # 锁定 windows-2022: latest 镜像已是 VS18(2026), CUDA 12.4 的 nvcc 只支持到 VS2022
-          - os: windows-2022
+          # CPU 用 latest (VS18 可正常编译); GPU 锁定 windows-2022:
+          # latest 镜像已是 VS18(2026), CUDA 12.4 的 nvcc 只支持到 VS2022
+          - os: windows-latest
             variant: cpu
             bundles: nsis
           - os: windows-2022
@@ -82,9 +83,9 @@ jobs:
             ~/.cargo/git
             app/src-tauri/target/release/build/whisper-rs-sys-*/out
             app/src-tauri/target/release/build/llama-cpp-sys-2-*/out
-          key: cargo-${{ runner.os }}-${{ matrix.variant }}-${{ hashFiles('app/src-tauri/Cargo.lock') }}
+          key: cargo2-${{ matrix.os }}-${{ matrix.variant }}-${{ hashFiles('app/src-tauri/Cargo.lock') }}
           restore-keys: |
-            cargo-${{ runner.os }}-${{ matrix.variant }}-
+            cargo2-${{ matrix.os }}-${{ matrix.variant }}-
 
       # runner 镜像已不预装 CUDA, 从 NVIDIA 官方源装工具链子集 (仅编译用, 不需要 GPU)
       - name: 安装 CUDA 工具链 (GPU 版, Linux)
