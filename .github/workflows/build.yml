@@ -85,15 +85,26 @@ jobs:
           echo "PATH=/usr/local/cuda-12.6/bin:$PATH" >> $GITHUB_ENV
           /usr/local/cuda-12.6/bin/nvcc --version | tail -2
 
+      # Windows: 照抄 whisper.cpp 官方 CI 的 CUDA redist 组件方案 (免安装器, 仅拉所需组件)
       - name: 安装 CUDA 工具链 (GPU 版, Windows)
         if: matrix.variant == 'gpu' && runner.os == 'Windows'
         shell: bash
         run: |
-          curl -sL -o /tmp/cuda.exe https://developer.download.nvidia.com/compute/cuda/12.6.1/local_installers/cuda_12.6.1_12.6.1_windows.exe
-          /tmp/cuda.exe -s nvcc cudart cublas cublas_dev || true
-          CUDA_BIN="/c/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v12.6/bin"
+          set -e
+          D="https://developer.download.nvidia.com/compute/cuda/redist"
+          T="/c/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v12.4"
+          mkdir -p "$T" /tmp/cuda-zips && cd /tmp/cuda-zips
+          curl -sfL -O "$D/cuda_cudart/windows-x86_64/cuda_cudart-windows-x86_64-12.4.127-archive.zip"
+          curl -sfL -O "$D/cuda_nvcc/windows-x86_64/cuda_nvcc-windows-x86_64-12.4.131-archive.zip"
+          curl -sfL -O "$D/cuda_nvrtc/windows-x86_64/cuda_nvrtc-windows-x86_64-12.4.127-archive.zip"
+          curl -sfL -O "$D/libcublas/windows-x86_64/libcublas-windows-x86_64-12.4.5.8-archive.zip"
+          curl -sfL -O "$D/cuda_cccl/windows-x86_64/cuda_cccl-windows-x86_64-12.4.127-archive.zip"
+          for z in *.zip; do unzip -q "$z" -d "$T"; done
+          for d in "$T"/*-archive; do cp -r "$d"/. "$T"/; done
+          rm -rf "$T"/*-archive
+          CUDA_BIN="$T/bin"
           ls "$CUDA_BIN/nvcc.exe"
-          echo "CUDA_PATH=C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.6" >> $GITHUB_ENV
+          echo "CUDA_PATH=C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.4" >> $GITHUB_ENV
           echo "CUDA_BIN=$CUDA_BIN" >> $GITHUB_ENV
           echo "PATH=$CUDA_BIN:$PATH" >> $GITHUB_ENV
           "$CUDA_BIN/nvcc.exe" --version | tail -2
@@ -108,7 +119,7 @@ jobs:
           if [ "$RUNNER_OS" = "Linux" ]; then
             cp "$(command -v ffmpeg)" src-tauri/ffmpeg/bin/ffmpeg
           else
-            curl -sL -o /tmp/ff.zip "https://github.com/BtbN/FFmpeg-Builds/releases/latest/download/ffmpeg-master-latest-win64-gpl.zip"
+            curl -sfL -o /tmp/ff.zip "https://github.com/BtbN/FFmpeg-Builds/releases/latest/download/ffmpeg-master-latest-win64-gpl.zip"
             unzip -o -j /tmp/ff.zip "*/bin/ffmpeg.exe" -d src-tauri/ffmpeg/bin/
           fi
           # GPU 版(Windows): cudart/cublas 随包分发, 用户免装 CUDA 运行库
