@@ -65,7 +65,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y libwebkit2gtk-4.1-dev libgtk-3-dev \
             libayatana-appindicator3-dev librsvg2-dev libxdo-dev \
-            build-essential curl wget file libssl-dev cmake
+            build-essential curl wget file libssl-dev cmake ffmpeg unzip
 
       - uses: actions/setup-node@v4
         with:
@@ -73,25 +73,26 @@ jobs:
 
       - uses: dtolnay/rust-toolchain@stable
 
-      - name: 定位 CUDA 工具链 (GPU 版)
+      # runner 镜像已不预装 CUDA, 用官方渠道装工具链 (仅编译用, 不需要 GPU)
+      - name: 安装 CUDA 工具链 (GPU 版)
+        if: matrix.variant == 'gpu'
+        uses: Jimver/cuda-toolkit-action@v0.2.27
+        with:
+          cuda-version: '12.6.1'
+
+      - name: 校验并固化 CUDA 环境 (GPU 版)
         if: matrix.variant == 'gpu'
         shell: bash
         run: |
+          echo "CUDA_PATH=$CUDA_PATH"
           if [ "$RUNNER_OS" = "Windows" ]; then
-            NVCC="$(command -v nvcc || true)"
-            if [ -z "$NVCC" ]; then
-              for d in "/c/Program Files/NVIDIA GPU Computing Toolkit/CUDA"/*/bin/nvcc.exe; do
-                NVCC="$d"; break
-              done
-            fi
-            CUDA_BIN=$(dirname "$NVCC")
-            echo "CUDA_PATH=$(cygpath -w "$CUDA_BIN/..")" >> $GITHUB_ENV
-            echo "PATH=$CUDA_BIN:$PATH" >> $GITHUB_ENV
-            echo "CUDA_BIN=$CUDA_BIN" >> $GITHUB_ENV
+            CUDA_BIN="$(cygpath -u "$CUDA_PATH")/bin"
           else
-            echo "PATH=/usr/local/cuda/bin:$PATH" >> $GITHUB_ENV
-            echo "CUDA_BIN=/usr/local/cuda/bin" >> $GITHUB_ENV
+            CUDA_BIN="$CUDA_PATH/bin"
           fi
+          echo "CUDA_BIN=$CUDA_BIN" >> $GITHUB_ENV
+          echo "PATH=$CUDA_BIN:$PATH" >> $GITHUB_ENV
+          export PATH="$CUDA_BIN:$PATH"
           nvcc --version | tail -2
 
       - name: 安装前端依赖 + 准备 ffmpeg/CUDA 运行库
