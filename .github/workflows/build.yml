@@ -18,10 +18,11 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - os: windows-latest
+          # 锁定 windows-2022: latest 镜像已是 VS18(2026), CUDA 12.4 的 nvcc 只支持到 VS2022
+          - os: windows-2022
             variant: cpu
             bundles: nsis
-          - os: windows-latest
+          - os: windows-2022
             variant: gpu
             bundles: nsis
           - os: ubuntu-22.04
@@ -154,6 +155,8 @@ jobs:
         env:
           # Ninja 生成器 + 显式 nvcc: 绕开 MSVC toolset 发现机制 (VS 生成器对 redist 拼装的 CUDA 布局不认)
           CMAKE_GENERATOR: Ninja
+          # 保险: 万一宿主 MSVC 比 CUDA 支持表新, 越过 nvcc 版本检查
+          NVCC_PREPEND_FLAGS: -allow-unsupported-compiler
         run: |
           if [ "$RUNNER_OS" = "Windows" ]; then
             export CUDACXX="$(cygpath -w "$CUDA_BIN/nvcc.exe")"
