@@ -99,6 +99,7 @@ jobs:
           curl -sfL -O "$D/cuda_nvrtc/windows-x86_64/cuda_nvrtc-windows-x86_64-12.4.127-archive.zip"
           curl -sfL -O "$D/libcublas/windows-x86_64/libcublas-windows-x86_64-12.4.5.8-archive.zip"
           curl -sfL -O "$D/cuda_cccl/windows-x86_64/cuda_cccl-windows-x86_64-12.4.127-archive.zip"
+          curl -sfL -O "$D/visual_studio_integration/windows-x86_64/visual_studio_integration-windows-x86_64-12.4.127-archive.zip"
           for z in *.zip; do unzip -q "$z" -d "$T"; done
           for d in "$T"/*-archive; do cp -r "$d"/. "$T"/; done
           rm -rf "$T"/*-archive
