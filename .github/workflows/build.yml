@@ -33,7 +33,7 @@ jobs:
             variant: gpu
             bundles: deb
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 90
+    timeout-minutes: 180
     env:
       VARIANT: ${{ matrix.variant }}
       BUNDLES: ${{ matrix.bundles }}
