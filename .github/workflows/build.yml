@@ -187,6 +187,6 @@ jobs:
           gh release view "$TAG" --repo ceoifung/subpilot-pub > /dev/null 2>&1 || \
             gh release create "$TAG" --repo ceoifung/subpilot-pub \
               --title "SubPilot $TAG" \
-              --notes "SubPilot 双语字幕播放器 $TAG — 自动构建。CPU 版通用; -GPU 版显存自适应: 识别恒走GPU, 剩余显存≥10GB时翻译也上GPU。模型请见 models-v1 Release 或 README。模型请见 models-v1 Release 或 README。" \
+              --notes "SubPilot 双语字幕播放器 $TAG — 自动构建。CPU 版通用; -GPU 版显存自适应: 识别恒走GPU, 剩余显存≥10GB时翻译也上GPU。模型请见 models-v1 Release 或 README。" \
               --target main
           gh release upload "$TAG" --repo ceoifung/subpilot-pub --clobber "$ASSET"
