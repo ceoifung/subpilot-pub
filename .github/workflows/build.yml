@@ -158,6 +158,10 @@ jobs:
           CMAKE_GENERATOR: Ninja
           # 保险: 万一宿主 MSVC 比 CUDA 支持表新, 越过 nvcc 版本检查
           NVCC_PREPEND_FLAGS: -allow-unsupported-compiler
+          # 瘦身: CMake 原生钩子, whisper 与 llama 两侧 cmake 一并约束
+          # (ggml 默认 50~90 八架构全编, SASS cubin 曾撑到 .nv_fatbin 1GB;
+          #  SASS 只编 86/89 主流, 其余 PTX 供旧卡/新卡 JIT)
+          CUDAARCHS: 61-virtual;75-virtual;80-virtual;86-real;89-real;90-virtual
         run: |
           if [ "$RUNNER_OS" = "Windows" ]; then
             export CUDACXX="$(cygpath -w "$CUDA_BIN/nvcc.exe")"
