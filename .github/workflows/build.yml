@@ -143,6 +143,12 @@ jobs:
             ls -la src-tauri/cuda/
           fi
 
+      # CUDAARCHS 仅在 CMake 首次检测 CUDA 编译器时被读取; llama 的 CMakeCache 是
+      # 缓存烙下的旧配置, 不清掉则该环境变量对 llama 不生效 (rc2 实测如此)
+      - name: 清理 llama CMakeCache (让 CUDAARCHS 生效)
+        if: matrix.variant == 'gpu'
+        run: rm -f app/src-tauri/target/release/build/llama-cpp-sys-2-*/out/build/CMakeCache.txt
+
       - name: 构建 (CPU 版)
         if: matrix.variant == 'cpu'
         shell: bash
@@ -161,7 +167,7 @@ jobs:
           # 瘦身: CMake 原生钩子, whisper 与 llama 两侧 cmake 一并约束
           # (ggml 默认 50~90 八架构全编, SASS cubin 曾撑到 .nv_fatbin 1GB;
           #  SASS 只编 86/89 主流, 其余 PTX 供旧卡/新卡 JIT)
-          CUDAARCHS: 61-virtual;75-virtual;80-virtual;86-real;89-real;90-virtual
+          CUDAARCHS: 61-virtual;75-virtual;80-virtual;89-real;90-virtual
         run: |
           if [ "$RUNNER_OS" = "Windows" ]; then
             export CUDACXX="$(cygpath -w "$CUDA_BIN/nvcc.exe")"
