@@ -8,12 +8,19 @@ on:
       tag:
         description: '要构建的 tag (如 v0.1.0)'
         required: true
+      only:
+        description: '留空=四路全跑; linux-gpu=只跑 Linux GPU (体积验证)'
+        required: false
+        default: ''
 
 permissions:
   contents: write
 
 jobs:
   build:
+    # workflow_dispatch 可用 only=linux-gpu 只跑体积验证一路 (job 级取消无 API,
+    # 免得验证体积时白烧 Windows 两小时的 CI)
+    if: ${{ github.event_name != 'workflow_dispatch' || github.event.inputs.only != 'linux-gpu' || (matrix.os == 'ubuntu-22.04' && matrix.variant == 'gpu') }}
     strategy:
       fail-fast: false
       matrix:
