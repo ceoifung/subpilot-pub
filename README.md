@@ -17,6 +17,10 @@ Drop in any video and get real-time subtitles in your language — no account, n
 
 </div>
 
+<p align="center">
+  <img src="assets/screenshot-welcome.png" width="800" alt="SubPilot">
+</p>
+
 ---
 
 **6.6MB** CPU installer · **99+** recognized languages · **0** bytes uploaded · **2** large models running fully local
