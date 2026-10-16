@@ -18,27 +18,16 @@ permissions:
 
 jobs:
   build:
-    # workflow_dispatch 可用 only=linux-gpu 只跑体积验证一路 (job 级取消无 API,
-    # 免得验证体积时白烧 Windows 两小时的 CI)
-    if: ${{ github.event_name != 'workflow_dispatch' || github.event.inputs.only != 'linux-gpu' || (matrix.os == 'ubuntu-22.04' && matrix.variant == 'gpu') }}
+    # only=linux-gpu 时只跑体积验证一路 (job 级 if 看不到 matrix, 用动态矩阵)
     strategy:
       fail-fast: false
-      matrix:
-        include:
-          # CPU 用 latest (VS18 可正常编译); GPU 锁定 windows-2022:
-          # latest 镜像已是 VS18(2026), CUDA 12.4 的 nvcc 只支持到 VS2022
-          - os: windows-latest
-            variant: cpu
-            bundles: nsis
-          - os: windows-2022
-            variant: gpu
-            bundles: nsis
-          - os: ubuntu-22.04
-            variant: cpu
-            bundles: deb
-          - os: ubuntu-22.04
-            variant: gpu
-            bundles: deb
+      matrix: ${{ fromJSON(inputs.only == 'linux-gpu'
+        && '{"include":[{"os":"ubuntu-22.04","variant":"gpu","bundles":"deb"}]}'
+        || '{"include":[
+             {"os":"windows-latest","variant":"cpu","bundles":"nsis"},
+             {"os":"windows-2022","variant":"gpu","bundles":"nsis"},
+             {"os":"ubuntu-22.04","variant":"cpu","bundles":"deb"},
+             {"os":"ubuntu-22.04","variant":"gpu","bundles":"deb"}]}') }}
     runs-on: ${{ matrix.os }}
     timeout-minutes: 180
     env:
