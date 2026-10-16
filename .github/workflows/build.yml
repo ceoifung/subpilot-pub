@@ -147,6 +147,7 @@ jobs:
       # 缓存烙下的旧配置, 不清掉则该环境变量对 llama 不生效 (rc2 实测如此)
       - name: 清理 llama CMakeCache (让 CUDAARCHS 生效)
         if: matrix.variant == 'gpu'
+        shell: bash
         run: rm -f app/src-tauri/target/release/build/llama-cpp-sys-2-*/out/build/CMakeCache.txt
 
       - name: 构建 (CPU 版)
