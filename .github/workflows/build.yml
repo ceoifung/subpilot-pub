@@ -189,6 +189,13 @@ jobs:
           echo "fatbin 总大小: $(du -h /tmp/fatbin.bin | cut -f1)"
           echo "PTX 架构分布 (模块数):"
           grep -abo '\.target sm_[0-9a-z]*' /tmp/fatbin.bin | awk -F: '{print $2}' | sort | uniq -c
+          echo "两侧 cmake 实际生成的 gencode 标志:"
+          grep -rh "generate-code" src-tauri/target/release/build/*/out/build --include=flags.make 2>/dev/null | grep -o "arch=[^\"]*" | sort | uniq -c
+          sudo apt-get install -y -qq cuda-cuobjdump-12-6 >/dev/null 2>&1 || true
+          if command -v cuobjdump >/dev/null; then
+            echo "SASS(cubin) 架构分布:"
+            cuobjdump --list-elf /tmp/fatbin.bin | grep -o "sm_[0-9a-z]*" | sort | uniq -c
+          fi
 
       - name: 上传产物到 Release
         shell: bash
